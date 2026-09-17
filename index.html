@@ -40,7 +40,9 @@
         th, td { border: 1px solid #dee2e6; padding: 12px; text-align: center; vertical-align: middle; }
         th { background-color: #343a40; color: white; font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; }
         
-        img.avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; }
+        /* Interactive Avatar Style */
+        img.avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+        img.avatar:hover { transform: scale(1.15); border-color: #007bff; }
         
         .highlight-5 { background-color: #fff3cd !important; color: #856404; font-weight: bold; }
         .highlight-3 { background-color: #e2e3e5 !important; color: #383d41; font-weight: bold; }
@@ -51,11 +53,16 @@
         .clickable-title { color: #007bff; text-decoration: none; font-weight: bold; cursor: pointer; }
         .clickable-title:hover { text-decoration: underline; }
 
-        /* Modal Popup */
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+        /* Modal Popups */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(3px); }
         .modal-content { background-color: white; margin: 8% auto; padding: 25px; border-radius: 8px; width: 90%; max-width: 650px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        
+        /* Full Image View Modal Styling */
+        .image-modal-content { background-color: #1a252f; color: white; margin: 5% auto; padding: 25px; border-radius: 12px; width: 90%; max-width: 450px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .image-modal-content img { max-width: 100%; max-height: 350px; border-radius: 8px; border: 3px solid #007bff; margin-top: 10px; object-fit: contain; }
+        
         .close-btn { float: right; font-size: 24px; font-weight: bold; cursor: pointer; color: #aaa; }
-        .close-btn:hover { color: #000; }
+        .close-btn:hover { color: #fff; }
         
         .search-bar { display: flex; gap: 10px; margin-bottom: 15px; }
         .search-bar input { width: 100%; }
@@ -160,7 +167,7 @@
 <!-- Tournament Detailed View Modal -->
 <div id="tournamentModal" class="modal">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <span class="close-btn" style="color: #333;" onclick="closeModal('tournamentModal')">&times;</span>
         <h3 id="modalTitle" style="margin-top:0; color:#2c3e50;">Tournament Details</h3>
         <p style="font-size: 13px; color: #6c757d;">Random Placement: 1st Place = <strong>+5 PTS</strong> (Gold), Next 5 = <strong>+3 PTS</strong> (Silver), Others = <strong>+1 PT</strong></p>
         <table>
@@ -173,6 +180,15 @@
             </thead>
             <tbody id="modalTableBody"></tbody>
         </table>
+    </div>
+</div>
+
+<!-- Full Image View Modal -->
+<div id="imageModal" class="modal">
+    <div class="image-modal-content">
+        <span class="close-btn" onclick="closeModal('imageModal')">&times;</span>
+        <h3 id="imageModalPlayerName" style="margin: 0 0 10px 0; color: #007bff;">Player Profile</h3>
+        <img id="fullViewImage" src="" alt="Player Full View">
     </div>
 </div>
 
@@ -247,6 +263,12 @@
         }
     }
 
+    function openFullImage(imgSrc, playerName) {
+        document.getElementById("fullViewImage").src = imgSrc;
+        document.getElementById("imageModalPlayerName").innerText = playerName;
+        document.getElementById("imageModal").style.display = "block";
+    }
+
     function populateCheckboxList() {
         let container = document.getElementById("playerCheckboxList");
         container.innerHTML = "";
@@ -316,7 +338,7 @@
         tournaments.forEach((t, index) => {
             let row = `<tr>
                 <td>${index + 1}</td>
-                <td><span class="clickable-title" onclick="openModal(${t.id})">${t.name}</span></td>
+                <td><span class="clickable-title" onclick="openModal('${t.id}')">${t.name}</span></td>
                 <td>${t.results.length} Players</td>
                 <td>
                     <button class="btn-danger" onclick="deleteTournament(${index})">Delete</button>
@@ -327,7 +349,7 @@
     }
 
     function openModal(tId) {
-        let tournament = tournaments.find(t => t.id === tId);
+        let tournament = tournaments.find(t => t.id == tId);
         if (!tournament) return;
 
         document.getElementById("modalTitle").innerText = tournament.name + " - Results";
@@ -352,8 +374,8 @@
         document.getElementById("tournamentModal").style.display = "block";
     }
 
-    function closeModal() {
-        document.getElementById("tournamentModal").style.display = "none";
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
     }
 
     function deleteTournament(index) {
@@ -383,11 +405,12 @@
 
             if (filterText === "" || nameMatch || teamMatch || serialMatch) {
                 visibleCount++;
-                let imgSrc = player.img || "https://via.placeholder.com/45";
+                let imgSrc = player.img || "https://via.placeholder.com/150";
+                let escapedName = player.name.replace(/'/g, "\\'");
                 let row = `<tr>
                     <td><strong>${serialNo}</strong></td>
                     <td>${player.name}</td>
-                    <td><img src="${imgSrc}" class="avatar" alt="avatar"></td>
+                    <td><img src="${imgSrc}" class="avatar" alt="avatar" onclick="openFullImage('${imgSrc}', '${escapedName}')" title="Click to view full image"></td>
                     <td>${player.team}</td>
                     <td><strong>${player.score}</strong></td>
                     <td><span class="rank-badge">#${player.rank}</span></td>
@@ -466,12 +489,12 @@
         localStorage.setItem("tournamentsData", JSON.stringify(tournaments));
     }
 
-    // Window click event handler for modal closure
+    // Window click event handler for closing modals when clicking outside
     window.onclick = function(event) {
-        let modal = document.getElementById("tournamentModal");
-        if (event.target === modal) {
-            closeModal();
-        }
+        let tModal = document.getElementById("tournamentModal");
+        let iModal = document.getElementById("imageModal");
+        if (event.target === tModal) closeModal('tournamentModal');
+        if (event.target === iModal) closeModal('imageModal');
     };
 </script>
 
