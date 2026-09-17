@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament & Global Leaderboard System</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: #ffffff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #1a252f; padding: 15px 20px; border-radius: 8px; color: white; flex-wrap: wrap; gap: 10px; }
+        .top-bar h2 { margin: 0; font-size: 22px; }
+        
+        .auth-status { display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 14px; }
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-weight: bold; }
+        .status-logged-out { background: #e74c3c; color: white; }
+        .status-logged-in { background: #2ecc71; color: white; }
+
+        .section-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e9ecef; }
+        .section-box h3 { margin-top: 0; margin-bottom: 15px; color: #2c3e50; border-bottom: 2px solid #007bff; display: inline-block; padding-bottom: 4px; }
+
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        input, button, select { padding: 10px 14px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; outline: none; }
+        input:focus { border-color: #007bff; }
+        input[type="file"] { background: white; padding: 7px 10px; }
+        
+        button { cursor: pointer; background: #007bff; color: white; border: none; font-weight: bold; transition: background 0.2s; border-radius: 6px; }
+        button:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #bd2130; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: center; vertical-align: middle; }
+        th { background-color: #343a40; color: white; font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; }
+        
+        img.avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; }
+        
+        .highlight-5 { background-color: #fff3cd !important; color: #856404; font-weight: bold; }
+        .highlight-3 { background-color: #e2e3e5 !important; color: #383d41; font-weight: bold; }
+        .highlight-1 { background-color: #ffffff !important; }
+
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; max-height: 180px; overflow-y: auto; background: white; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; margin-bottom: 12px; }
+        .checkbox-grid label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+        .clickable-title { color: #007bff; text-decoration: none; font-weight: bold; cursor: pointer; }
+        .clickable-title:hover { text-decoration: underline; }
+
+        /* Modal Popup */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+        .modal-content { background-color: white; margin: 8% auto; padding: 25px; border-radius: 8px; width: 90%; max-width: 650px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        .close-btn { float: right; font-size: 24px; font-weight: bold; cursor: pointer; color: #aaa; }
+        .close-btn:hover { color: #000; }
+        
+        .search-bar { display: flex; gap: 10px; margin-bottom: 15px; }
+        .search-bar input { width: 100%; }
+        
+        .rank-badge { background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #495057; }
+
+        /* Login Landing Screen Styles */
+        .login-card { max-width: 400px; margin: 80px auto; background: white; padding: 35px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        .login-card h2 { margin-top: 0; color: #1a252f; margin-bottom: 10px; }
+        .login-card p { color: #6c757d; font-size: 14px; margin-bottom: 25px; }
+        .login-card input { width: 100%; margin-bottom: 15px; padding: 12px; }
+        .login-card button { width: 100%; padding: 12px; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<!-- Public View: Login Screen Only -->
+<div id="publicViewScreen" class="login-card">
+    <h2>Admin Portal</h2>
+    <p>Please log in to access the system</p>
+    <input type="password" id="adminPassInput" placeholder="Enter Admin Password">
+    <button onclick="loginAdmin()">Admin Login</button>
+</div>
+
+<!-- Admin Dashboard View (Hidden until Login) -->
+<div class="container" id="adminDashboardView" style="display: none;">
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <h2>Tournament & Leaderboard System</h2>
+        <div class="auth-status">
+            <span>Status:</span>
+            <span class="status-badge status-logged-in">Admin Mode</span>
+            <button class="btn-secondary" onclick="changePassword()">Change Password</button>
+            <button class="btn-danger" onclick="logoutAdmin()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Admin Section: Generate Tournament -->
+    <div class="section-box" id="tournamentAdminSection">
+        <h3>Create New Tournament</h3>
+        <div style="margin-bottom: 12px;">
+            <input type="text" id="tournamentNameInput" placeholder="Tournament Name (e.g., Championship Week 1)" style="width: 100%;">
+        </div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Select Players (Leaderboard S.No - Name - Team):</label>
+        <div id="playerCheckboxList" class="checkbox-grid"></div>
+        <button onclick="generateTournament()" class="btn-success">Generate Tournament & Award Points</button>
+    </div>
+
+    <!-- Tournaments History Table -->
+    <div class="section-box">
+        <h3>Tournaments History</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Tournament Name</th>
+                    <th>Participants</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tournamentTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Global Leaderboard Section -->
+    <div class="section-box">
+        <h3>Global Leaderboard</h3>
+        
+        <!-- Live Search Bar -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search leaderboard by S.No, Player Name, or Team Name..." onkeyup="renderLeaderboard()">
+        </div>
+
+        <!-- Add/Edit Player Controls -->
+        <div class="controls" id="adminForm" style="margin-bottom: 15px; background: #e9ecef; padding: 12px; border-radius: 6px;">
+            <input type="text" id="playerName" placeholder="Player Name" required>
+            <input type="file" id="imgFile" accept="image/*">
+            <input type="text" id="teamName" placeholder="Team Name" required>
+            <input type="number" id="score" placeholder="Initial Score" required>
+            <button onclick="saveEntry()" id="saveBtn">Add Player</button>
+            <button onclick="clearForm()" class="btn-secondary">Clear</button>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Player Name</th>
+                    <th>Image</th>
+                    <th>Team</th>
+                    <th>Score</th>
+                    <th>Rank</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Tournament Detailed View Modal -->
+<div id="tournamentModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h3 id="modalTitle" style="margin-top:0; color:#2c3e50;">Tournament Details</h3>
+        <p style="font-size: 13px; color: #6c757d;">Random Placement: 1st Place = <strong>+5 PTS</strong> (Gold), Next 5 = <strong>+3 PTS</strong> (Silver), Others = <strong>+1 PT</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Player Name</th>
+                    <th>Team</th>
+                    <th>Points Awarded</th>
+                </tr>
+            </thead>
+            <tbody id="modalTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let editIndex = null;
+    let currentBase64Image = "";
+
+    // Local Storage Setup
+    if (!localStorage.getItem("adminPassword")) {
+        localStorage.setItem("adminPassword", "admin123");
+    }
+    if (!localStorage.getItem("playersData")) {
+        const defaultPlayers = [
+            { id: 101, name: "Alex Rivera", img: "", team: "Alpha", score: 85 },
+            { id: 102, name: "Jordan Lee", img: "", team: "Beta", score: 95 },
+            { id: 103, name: "Sam Patel", img: "", team: "Alpha", score: 70 },
+            { id: 104, name: "Taylor Swift", img: "", team: "Gamma", score: 60 },
+            { id: 105, name: "Chris Evans", img: "", team: "Beta", score: 90 },
+            { id: 106, name: "Morgan Freeman", img: "", team: "Gamma", score: 75 },
+            { id: 107, name: "Emma Watson", img: "", team: "Alpha", score: 80 }
+        ];
+        localStorage.setItem("playersData", JSON.stringify(defaultPlayers));
+    }
+    if (!localStorage.getItem("tournamentsData")) {
+        localStorage.setItem("tournamentsData", JSON.stringify([]));
+    }
+
+    let players = JSON.parse(localStorage.getItem("playersData"));
+    let tournaments = JSON.parse(localStorage.getItem("tournamentsData"));
+
+    // Convert local gallery image file to Base64 standard string
+    document.getElementById("imgFile").addEventListener("change", function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(evt) { currentBase64Image = evt.target.result; };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function loginAdmin() {
+        let pass = document.getElementById("adminPassInput").value;
+        if (pass === localStorage.getItem("adminPassword")) {
+            document.getElementById("adminPassInput").value = "";
+            document.getElementById("publicViewScreen").style.display = "none";
+            document.getElementById("adminDashboardView").style.display = "block";
+            populateCheckboxList();
+            renderLeaderboard();
+            renderTournaments();
+        } else {
+            alert("Incorrect Password!");
+        }
+    }
+
+    function logoutAdmin() {
+        document.getElementById("adminDashboardView").style.display = "none";
+        document.getElementById("publicViewScreen").style.display = "block";
+    }
+
+    function changePassword() {
+        let currentPass = prompt("Enter current password:");
+        if (currentPass === localStorage.getItem("adminPassword")) {
+            let newPass = prompt("Enter new password:");
+            if (newPass && newPass.trim() !== "") {
+                localStorage.setItem("adminPassword", newPass.trim());
+                alert("Password updated successfully!");
+            } else {
+                alert("Password cannot be empty.");
+            }
+        } else if (currentPass !== null) {
+            alert("Incorrect password.");
+        }
+    }
+
+    function populateCheckboxList() {
+        let container = document.getElementById("playerCheckboxList");
+        container.innerHTML = "";
+        
+        if (players.length === 0) {
+            container.innerHTML = "<em>No players available. Add players in leaderboard section first.</em>";
+            return;
+        }
+
+        // Map S.No directly from Global Leaderboard array index
+        players.forEach((p, index) => {
+            let serialNo = index + 1;
+            container.innerHTML += `
+                <label>
+                    <input type="checkbox" value="${p.id}"> 
+                    <strong>S.No ${serialNo}:</strong> ${p.name} (${p.team})
+                </label>
+            `;
+        });
+    }
+
+    function generateTournament() {
+        let tName = document.getElementById("tournamentNameInput").value.trim();
+        let checkboxes = document.querySelectorAll("#playerCheckboxList input[type='checkbox']:checked");
+        let selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+        if (!tName) { alert("Please enter a Tournament Name."); return; }
+        if (selectedIds.length === 0) { alert("Please select at least 1 player."); return; }
+
+        // Shuffle selected participants randomly
+        let shuffled = [...selectedIds].sort(() => 0.5 - Math.random());
+        let results = [];
+
+        shuffled.forEach((id, index) => {
+            let points = 1;
+            if (index === 0) points = 5; // 1 Player gets 5 points
+            else if (index >= 1 && index <= 5) points = 3; // Up to 5 Players get 3 points
+
+            results.push({ playerId: id, pointsAwarded: points });
+
+            // Automatically add scores to global leaderboard
+            let pIndex = players.findIndex(p => p.id === id);
+            if (pIndex !== -1) {
+                players[pIndex].score += points;
+            }
+        });
+
+        tournaments.push({ id: Date.now(), name: tName, results: results });
+
+        saveAll();
+        renderLeaderboard();
+        renderTournaments();
+        document.getElementById("tournamentNameInput").value = "";
+        populateCheckboxList();
+        alert("Tournament generated successfully and points added to Leaderboard!");
+    }
+
+    function renderTournaments() {
+        let tbody = document.getElementById("tournamentTableBody");
+        tbody.innerHTML = "";
+        
+        if (tournaments.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4">No tournaments created yet.</td></tr>`;
+            return;
+        }
+
+        tournaments.forEach((t, index) => {
+            let row = `<tr>
+                <td>${index + 1}</td>
+                <td><span class="clickable-title" onclick="openModal(${t.id})">${t.name}</span></td>
+                <td>${t.results.length} Players</td>
+                <td>
+                    <button class="btn-danger" onclick="deleteTournament(${index})">Delete</button>
+                </td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function openModal(tId) {
+        let tournament = tournaments.find(t => t.id === tId);
+        if (!tournament) return;
+
+        document.getElementById("modalTitle").innerText = tournament.name + " - Results";
+        let tbody = document.getElementById("modalTableBody");
+        tbody.innerHTML = "";
+
+        // Sort results display descending by awarded points
+        let sortedResults = [...tournament.results].sort((a,b) => b.pointsAwarded - a.pointsAwarded);
+
+        sortedResults.forEach(r => {
+            let player = players.find(p => p.id === r.playerId) || { name: "Deleted Player", team: "N/A" };
+            let highlightClass = r.pointsAwarded === 5 ? "highlight-5" : (r.pointsAwarded === 3 ? "highlight-3" : "highlight-1");
+
+            let row = `<tr class="${highlightClass}">
+                <td>${player.name}</td>
+                <td>${player.team}</td>
+                <td><strong>+${r.pointsAwarded} PTS</strong></td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+
+        document.getElementById("tournamentModal").style.display = "block";
+    }
+
+    function closeModal() {
+        document.getElementById("tournamentModal").style.display = "none";
+    }
+
+    function deleteTournament(index) {
+        if (confirm("Delete this tournament record? (Note: Points already awarded to players will remain on leaderboard)")) {
+            tournaments.splice(index, 1);
+            saveAll();
+            renderTournaments();
+        }
+    }
+
+    function renderLeaderboard() {
+        // Calculate dynamic ranking dynamically by scores
+        let sortedScores = [...players].map(p => p.score).sort((a, b) => b - a);
+        players.forEach(p => { p.rank = sortedScores.indexOf(p.score) + 1; });
+
+        let tbody = document.getElementById("tableBody");
+        tbody.innerHTML = "";
+        let filterText = document.getElementById("searchInput").value.toLowerCase().trim();
+
+        let visibleCount = 0;
+
+        players.forEach((player, index) => {
+            let serialNo = (index + 1).toString();
+            let nameMatch = player.name.toLowerCase().includes(filterText);
+            let teamMatch = player.team.toLowerCase().includes(filterText);
+            let serialMatch = serialNo === filterText;
+
+            if (filterText === "" || nameMatch || teamMatch || serialMatch) {
+                visibleCount++;
+                let imgSrc = player.img || "https://via.placeholder.com/45";
+                let row = `<tr>
+                    <td><strong>${serialNo}</strong></td>
+                    <td>${player.name}</td>
+                    <td><img src="${imgSrc}" class="avatar" alt="avatar"></td>
+                    <td>${player.team}</td>
+                    <td><strong>${player.score}</strong></td>
+                    <td><span class="rank-badge">#${player.rank}</span></td>
+                    <td>
+                        <button class="btn-warning" onclick="editEntry(${index})">Edit</button>
+                        <button class="btn-danger" onclick="deleteEntry(${index})">Delete</button>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            }
+        });
+
+        if (visibleCount === 0) {
+            tbody.innerHTML = `<tr><td colspan="7">No matching leaderboard entries found.</td></tr>`;
+        }
+    }
+
+    function saveEntry() {
+        let name = document.getElementById("playerName").value.trim();
+        let team = document.getElementById("teamName").value.trim();
+        let score = parseInt(document.getElementById("score").value);
+
+        if (!name || !team || isNaN(score)) {
+            alert("Please fill in Player Name, Team Name, and Initial Score.");
+            return;
+        }
+
+        let img = currentBase64Image;
+
+        if (editIndex !== null) {
+            if (!img) img = players[editIndex].img;
+            players[editIndex] = { ...players[editIndex], name, img, team, score };
+            editIndex = null;
+            document.getElementById("saveBtn").innerText = "Add Player";
+        } else {
+            players.push({ id: Date.now(), name, img, team, score });
+        }
+
+        saveAll();
+        clearForm();
+        renderLeaderboard();
+        populateCheckboxList();
+    }
+
+    function editEntry(index) {
+        let p = players[index];
+        document.getElementById("playerName").value = p.name;
+        document.getElementById("teamName").value = p.team;
+        document.getElementById("score").value = p.score;
+        currentBase64Image = p.img;
+        editIndex = index;
+        document.getElementById("saveBtn").innerText = "Update Player";
+    }
+
+    function deleteEntry(index) {
+        if (confirm("Delete this player from the leaderboard?")) {
+            players.splice(index, 1);
+            saveAll();
+            renderLeaderboard();
+            populateCheckboxList();
+        }
+    }
+
+    function clearForm() {
+        document.getElementById("playerName").value = "";
+        document.getElementById("teamName").value = "";
+        document.getElementById("score").value = "";
+        document.getElementById("imgFile").value = "";
+        currentBase64Image = "";
+        editIndex = null;
+        document.getElementById("saveBtn").innerText = "Add Player";
+    }
+
+    function saveAll() {
+        localStorage.setItem("playersData", JSON.stringify(players));
+        localStorage.setItem("tournamentsData", JSON.stringify(tournaments));
+    }
+
+    // Window click event handler for modal closure
+    window.onclick = function(event) {
+        let modal = document.getElementById("tournamentModal");
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
+</script>
+
+</body>
+</html>
